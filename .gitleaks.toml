@@ -1,0 +1,9 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public Polymarket market identifiers and lockfile hashes"
+paths = [
+    '''tests/fixtures/''',
+    '''uv\.lock''',
+]
