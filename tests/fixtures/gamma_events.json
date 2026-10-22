@@ -1,0 +1,56 @@
+[
+  {
+    "slug": "btc-updown-15m-1771813800",
+    "startDate": "2026-02-22T02:49:23.338833Z",
+    "markets": [
+      {
+        "slug": "btc-updown-15m-1771813800",
+        "conditionId": "0xe7863307a64b8ca64dfbe13d20b405b59697c767d050bc123403ae7eedb706a0",
+        "outcomes": "[\"Up\", \"Down\"]",
+        "outcomePrices": "[\"1\", \"0\"]",
+        "clobTokenIds": "[\"30175725445121622274196167184203019152889828127804215954976954162744039479645\", \"48055222452927656532604735988904510435505454482085489124601772708635223897425\"]",
+        "closed": true,
+        "orderMinSize": 5,
+        "orderPriceMinTickSize": 0.001,
+        "feesEnabled": true,
+        "feeSchedule": {
+          "exponent": 2,
+          "rate": 0.25,
+          "takerOnly": true,
+          "rebateRate": 0.2
+        },
+        "cryptoMarketConfig": null
+      }
+    ]
+  },
+  {
+    "slug": "btc-updown-15m-1790200800",
+    "startDate": "2026-09-22T22:08:32.008845Z",
+    "markets": [
+      {
+        "slug": "btc-updown-15m-1790200800",
+        "conditionId": "0xfb4fea5cf88a110d032c4108f8ab03333b91aca458c1d669ae07834abee0c326",
+        "outcomes": "[\"Up\", \"Down\"]",
+        "outcomePrices": "[\"1\", \"0\"]",
+        "clobTokenIds": "[\"9740057006214164715045771743341960937645111713512308910965815880492255410078\", \"32325359868553242882714127226727885197648780544168866333375866824336091358106\"]",
+        "closed": true,
+        "orderMinSize": 5,
+        "orderPriceMinTickSize": 0.001,
+        "feesEnabled": true,
+        "feeSchedule": {
+          "exponent": 1,
+          "rate": 0.07,
+          "takerOnly": true,
+          "rebateRate": 0.2
+        },
+        "cryptoMarketConfig": {
+          "id": "btc-15m-twap-60",
+          "asset": "btc",
+          "duration": "15m",
+          "twapEnabled": true,
+          "twapLookbackSeconds": 60
+        }
+      }
+    ]
+  }
+]
