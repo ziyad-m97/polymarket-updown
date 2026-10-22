@@ -1,0 +1,560 @@
+{
+  "Data": {
+    "cycles": 24383,
+    "snapshots": 339885,
+    "first": "2026-02-10",
+    "last": "2026-10-21",
+    "median_stamp_age_s": 47.0,
+    "binance_direction_agreement": 0.970881,
+    "timing": [
+      {
+        "stamped after": "11-20 s",
+        "n": 1609,
+        "equal share": 0.771908,
+        "mean gap": 0.003795
+      },
+      {
+        "stamped after": "21-30 s",
+        "n": 5082,
+        "equal share": 0.69815,
+        "mean gap": 0.005743
+      },
+      {
+        "stamped after": "31-40 s",
+        "n": 1154,
+        "equal share": 0.532929,
+        "mean gap": 0.016157
+      },
+      {
+        "stamped after": "41-50 s",
+        "n": 190,
+        "equal share": 0.321053,
+        "mean gap": 0.042076
+      },
+      {
+        "stamped after": "51-60 s",
+        "n": 38,
+        "equal share": 0.421053,
+        "mean gap": 0.028421
+      }
+    ]
+  },
+  "Are the prices calibrated?": {
+    "by_minute": [
+      {
+        "t": 60,
+        "n": 23725,
+        "brier_market": 0.247362,
+        "brier_model": 0.249335,
+        "logloss_market": 0.68782,
+        "logloss_model": 0.692265,
+        "slope": 0.971217,
+        "intercept": -0.002147
+      },
+      {
+        "t": 180,
+        "n": 24314,
+        "brier_market": 0.221646,
+        "brier_model": 0.225108,
+        "logloss_market": 0.633163,
+        "logloss_model": 0.641488,
+        "slope": 1.064487,
+        "intercept": 0.000329
+      },
+      {
+        "t": 300,
+        "n": 24324,
+        "brier_market": 0.200398,
+        "brier_model": 0.203403,
+        "logloss_market": 0.584637,
+        "logloss_model": 0.592452,
+        "slope": 1.060038,
+        "intercept": -0.00652
+      },
+      {
+        "t": 420,
+        "n": 24322,
+        "brier_market": 0.17777,
+        "brier_model": 0.181281,
+        "logloss_market": 0.529596,
+        "logloss_model": 0.538821,
+        "slope": 1.058724,
+        "intercept": -0.006186
+      },
+      {
+        "t": 540,
+        "n": 24314,
+        "brier_market": 0.151225,
+        "brier_model": 0.155726,
+        "logloss_market": 0.46137,
+        "logloss_model": 0.475663,
+        "slope": 1.066514,
+        "intercept": -0.002967
+      },
+      {
+        "t": 660,
+        "n": 24319,
+        "brier_market": 0.12289,
+        "brier_model": 0.128476,
+        "logloss_market": 0.385013,
+        "logloss_model": 0.404755,
+        "slope": 1.05545,
+        "intercept": -0.002951
+      },
+      {
+        "t": 780,
+        "n": 24325,
+        "brier_market": 0.092677,
+        "brier_model": 0.099178,
+        "logloss_market": 0.296383,
+        "logloss_model": 0.320685,
+        "slope": 1.021326,
+        "intercept": -0.017775
+      },
+      {
+        "t": 840,
+        "n": 24327,
+        "brier_market": 0.072493,
+        "brier_model": 0.080668,
+        "logloss_market": 0.236283,
+        "logloss_model": 0.269388,
+        "slope": 1.026303,
+        "intercept": -0.025199
+      }
+    ],
+    "reliability_m14": [
+      {
+        "bin": "[0.00, 0.05)",
+        "n": 6833,
+        "price": 0.013059,
+        "freq": 0.011122,
+        "lo": 0.008896,
+        "hi": 0.013898
+      },
+      {
+        "bin": "[0.05, 0.10)",
+        "n": 1324,
+        "price": 0.072252,
+        "freq": 0.066465,
+        "lo": 0.054263,
+        "hi": 0.081176
+      },
+      {
+        "bin": "[0.10, 0.20)",
+        "n": 1409,
+        "price": 0.146967,
+        "freq": 0.134847,
+        "lo": 0.118002,
+        "hi": 0.153678
+      },
+      {
+        "bin": "[0.20, 0.30)",
+        "n": 1008,
+        "price": 0.247621,
+        "freq": 0.248016,
+        "lo": 0.222346,
+        "hi": 0.275599
+      },
+      {
+        "bin": "[0.30, 0.40)",
+        "n": 794,
+        "price": 0.347662,
+        "freq": 0.337531,
+        "lo": 0.305493,
+        "hi": 0.371135
+      },
+      {
+        "bin": "[0.40, 0.50)",
+        "n": 774,
+        "price": 0.450687,
+        "freq": 0.439276,
+        "lo": 0.404698,
+        "hi": 0.474455
+      },
+      {
+        "bin": "[0.50, 0.60)",
+        "n": 793,
+        "price": 0.54576,
+        "freq": 0.547289,
+        "lo": 0.512499,
+        "hi": 0.581622
+      },
+      {
+        "bin": "[0.60, 0.70)",
+        "n": 794,
+        "price": 0.649903,
+        "freq": 0.661209,
+        "lo": 0.627582,
+        "hi": 0.693284
+      },
+      {
+        "bin": "[0.70, 0.80)",
+        "n": 935,
+        "price": 0.752585,
+        "freq": 0.754011,
+        "lo": 0.725403,
+        "hi": 0.78054
+      },
+      {
+        "bin": "[0.80, 0.90)",
+        "n": 1377,
+        "price": 0.854915,
+        "freq": 0.843137,
+        "lo": 0.822977,
+        "hi": 0.861388
+      },
+      {
+        "bin": "[0.90, 0.95)",
+        "n": 1336,
+        "price": 0.927705,
+        "freq": 0.928892,
+        "lo": 0.913846,
+        "hi": 0.941479
+      },
+      {
+        "bin": "[0.95, 1.00)",
+        "n": 6950,
+        "price": 0.987096,
+        "freq": 0.988921,
+        "lo": 0.986176,
+        "hi": 0.991126
+      }
+    ],
+    "blend": [
+      {
+        "t": 300.0,
+        "w_market": 0.814251,
+        "w_model": 0.219699,
+        "logloss_market": 0.582188,
+        "logloss_blend": 0.58131
+      },
+      {
+        "t": 600.0,
+        "w_market": 0.580754,
+        "w_model": 0.444635,
+        "logloss_market": 0.423328,
+        "logloss_blend": 0.424727
+      },
+      {
+        "t": 840.0,
+        "w_market": 0.943385,
+        "w_model": 0.096129,
+        "logloss_market": 0.233702,
+        "logloss_blend": 0.23303
+      }
+    ]
+  },
+  "Do the rules survive out of sample?": {
+    "rules": [
+      {
+        "rule": "legacy A",
+        "dev_n": 169.0,
+        "dev_win_rate": 0.349112,
+        "dev_avg_price": 0.375917,
+        "dev_roi": -0.125932,
+        "dev_lo": -0.311609,
+        "dev_hi": 0.050038,
+        "dev_p": 1.0,
+        "hold_n": 1031.0,
+        "hold_win_rate": 0.341416,
+        "hold_avg_price": 0.37535,
+        "hold_roi": -0.136611,
+        "hold_lo": -0.211292,
+        "hold_hi": -0.060245,
+        "hold_p": 1.0,
+        "ci": "[-0.211, -0.060]",
+        "hold_p_holm": 1.0
+      },
+      {
+        "rule": "legacy C1",
+        "dev_n": 162.0,
+        "dev_win_rate": 0.345679,
+        "dev_avg_price": 0.344907,
+        "dev_roi": -0.038924,
+        "dev_lo": -0.252205,
+        "dev_hi": 0.177829,
+        "dev_p": 1.0,
+        "hold_n": 866.0,
+        "hold_win_rate": 0.300231,
+        "hold_avg_price": 0.347816,
+        "hold_roi": -0.182803,
+        "hold_lo": -0.271234,
+        "hold_hi": -0.089257,
+        "hold_p": 1.0,
+        "ci": "[-0.271, -0.089]",
+        "hold_p_holm": 1.0
+      },
+      {
+        "rule": "legacy C2",
+        "dev_n": 108.0,
+        "dev_win_rate": 0.361111,
+        "dev_avg_price": 0.373148,
+        "dev_roi": -0.072687,
+        "dev_lo": -0.305859,
+        "dev_hi": 0.168012,
+        "dev_p": 1.0,
+        "hold_n": 693.0,
+        "hold_win_rate": 0.405483,
+        "hold_avg_price": 0.38296,
+        "hold_roi": 0.009783,
+        "hold_lo": -0.081603,
+        "hold_hi": 0.101891,
+        "hold_p": 0.4232,
+        "ci": "[-0.082, +0.102]",
+        "hold_p_holm": 1.0
+      },
+      {
+        "rule": "legacy E",
+        "dev_n": 455.0,
+        "dev_win_rate": 0.134066,
+        "dev_avg_price": 0.143854,
+        "dev_roi": -0.096124,
+        "dev_lo": -0.270749,
+        "dev_hi": 0.088304,
+        "dev_p": 1.0,
+        "hold_n": 2991.0,
+        "hold_win_rate": 0.129723,
+        "hold_avg_price": 0.143105,
+        "hold_roi": -0.148508,
+        "hold_lo": -0.226206,
+        "hold_hi": -0.068356,
+        "hold_p": 1.0,
+        "ci": "[-0.226, -0.068]",
+        "hold_p_holm": 1.0
+      },
+      {
+        "rule": "fair value",
+        "dev_n": 1978.0,
+        "dev_win_rate": 0.397371,
+        "dev_avg_price": 0.385148,
+        "dev_roi": 0.034934,
+        "dev_lo": -0.04517,
+        "dev_hi": 0.122361,
+        "dev_p": 0.2007,
+        "hold_n": 15313.0,
+        "hold_win_rate": 0.364462,
+        "hold_avg_price": 0.361401,
+        "hold_roi": -0.07038,
+        "hold_lo": -0.104108,
+        "hold_hi": -0.035751,
+        "hold_p": 1.0,
+        "ci": "[-0.104, -0.036]",
+        "hold_p_holm": 1.0
+      }
+    ],
+    "sensitivity": [
+      {
+        "rule": "legacy A",
+        "half_spread": "0.000",
+        "roi": -0.11279
+      },
+      {
+        "rule": "legacy A",
+        "half_spread": "0.005",
+        "roi": -0.124877
+      },
+      {
+        "rule": "legacy A",
+        "half_spread": "0.010",
+        "roi": -0.136611
+      },
+      {
+        "rule": "legacy A",
+        "half_spread": "0.020",
+        "roi": -0.159088
+      },
+      {
+        "rule": "legacy C1",
+        "half_spread": "0.000",
+        "roi": -0.157682
+      },
+      {
+        "rule": "legacy C1",
+        "half_spread": "0.005",
+        "roi": -0.170451
+      },
+      {
+        "rule": "legacy C1",
+        "half_spread": "0.010",
+        "roi": -0.182803
+      },
+      {
+        "rule": "legacy C1",
+        "half_spread": "0.020",
+        "roi": -0.206343
+      },
+      {
+        "rule": "legacy C2",
+        "half_spread": "0.000",
+        "roi": 0.037159
+      },
+      {
+        "rule": "legacy C2",
+        "half_spread": "0.005",
+        "roi": 0.023275
+      },
+      {
+        "rule": "legacy C2",
+        "half_spread": "0.010",
+        "roi": 0.009783
+      },
+      {
+        "rule": "legacy C2",
+        "half_spread": "0.020",
+        "roi": -0.016092
+      },
+      {
+        "rule": "legacy E",
+        "half_spread": "0.000",
+        "roi": -0.080921
+      },
+      {
+        "rule": "legacy E",
+        "half_spread": "0.005",
+        "roi": -0.116099
+      },
+      {
+        "rule": "legacy E",
+        "half_spread": "0.010",
+        "roi": -0.148508
+      },
+      {
+        "rule": "legacy E",
+        "half_spread": "0.020",
+        "roi": -0.206287
+      },
+      {
+        "rule": "fair value",
+        "half_spread": "0.000",
+        "roi": -0.024863
+      },
+      {
+        "rule": "fair value",
+        "half_spread": "0.005",
+        "roi": -0.053963
+      },
+      {
+        "rule": "fair value",
+        "half_spread": "0.010",
+        "roi": -0.07038
+      },
+      {
+        "rule": "fair value",
+        "half_spread": "0.020",
+        "roi": -0.095242
+      }
+    ],
+    "by_regime": [
+      {
+        "rule": "legacy A",
+        "regime": "holdout, fee v1",
+        "cell": "-0.287 (66)"
+      },
+      {
+        "rule": "legacy A",
+        "regime": "holdout, fee v2",
+        "cell": "-0.089 (647)"
+      },
+      {
+        "rule": "legacy A",
+        "regime": "holdout, TWAP resolution",
+        "cell": "-0.205 (318)"
+      },
+      {
+        "rule": "legacy C1",
+        "regime": "holdout, fee v1",
+        "cell": "-0.190 (67)"
+      },
+      {
+        "rule": "legacy C1",
+        "regime": "holdout, fee v2",
+        "cell": "-0.189 (525)"
+      },
+      {
+        "rule": "legacy C1",
+        "regime": "holdout, TWAP resolution",
+        "cell": "-0.169 (274)"
+      },
+      {
+        "rule": "legacy C2",
+        "regime": "holdout, fee v1",
+        "cell": "-0.125 (59)"
+      },
+      {
+        "rule": "legacy C2",
+        "regime": "holdout, fee v2",
+        "cell": "+0.016 (417)"
+      },
+      {
+        "rule": "legacy C2",
+        "regime": "holdout, TWAP resolution",
+        "cell": "+0.035 (217)"
+      },
+      {
+        "rule": "legacy E",
+        "regime": "holdout, fee v1",
+        "cell": "-0.259 (231)"
+      },
+      {
+        "rule": "legacy E",
+        "regime": "holdout, fee v2",
+        "cell": "-0.237 (1797)"
+      },
+      {
+        "rule": "legacy E",
+        "regime": "holdout, TWAP resolution",
+        "cell": "+0.043 (963)"
+      },
+      {
+        "rule": "fair value",
+        "regime": "holdout, fee v1",
+        "cell": "+0.077 (1031)"
+      },
+      {
+        "rule": "fair value",
+        "regime": "holdout, fee v2",
+        "cell": "-0.093 (9129)"
+      },
+      {
+        "rule": "fair value",
+        "regime": "holdout, TWAP resolution",
+        "cell": "-0.059 (5153)"
+      }
+    ]
+  },
+  "What the original bot actually did": {
+    "orders": 79,
+    "filled": 22,
+    "fill_rate": 0.278481,
+    "rows": [
+      {
+        "orders": "as booked by the bot (all filled at the limit)",
+        "n": 79,
+        "win rate": 0.278481,
+        "95% CI": "[0.19, 0.39]",
+        "staked": 373.17593,
+        "P&L": 69.009711,
+        "ROI": 0.184925
+      },
+      {
+        "orders": "actually filled, at the fill price",
+        "n": 22,
+        "win rate": 0.181818,
+        "95% CI": "[0.07, 0.39]",
+        "staked": 103.76442,
+        "P&L": -35.588387,
+        "ROI": -0.342973
+      },
+      {
+        "orders": "never filled, priced at the limit",
+        "n": 57,
+        "win rate": 0.315789,
+        "95% CI": "[0.21, 0.44]",
+        "staked": 261.88365,
+        "P&L": 110.711359,
+        "ROI": 0.42275
+      }
+    ],
+    "fisher_p": 0.182336
+  }
+}
