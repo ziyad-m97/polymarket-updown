@@ -23,19 +23,23 @@ books mirror each other).
 | column | type | meaning |
 |---|---|---|
 | epoch, t | int64, int16 | cycle and seconds since it opened |
-| age_s | int16 | how long before `epoch + t` the price point was printed (at most 120) |
-| mid_up | float64 | last Polymarket price-history point at or before `epoch + t` |
-| ref | float64 | Binance last price before that point's own timestamp |
-| vol_1m | float64 | std of the 60 one-minute log returns closed before that timestamp |
+| stamp_age_s | int16 | how long before `epoch + t` the price point was stamped (at most 120) |
+| mid_up | float64 | last Polymarket price-history point stamped at or before `epoch + t` |
+| ref | float64 | Binance last price before the point's observation time, its stamp minus 20 s |
+| ref_stamped | float64 | Binance last price before the stamp itself; leaks ~20 s of future, kept for comparison |
+| vol_1m | float64 | std of the 60 one-minute log returns closed before the observation time |
+
+A price-history point reports the mid from about 20 s before its stamp; the report's timing
+table measures this against the original bot's live midpoint samples.
 
 Sources: Gamma `/events` (series 10192), CLOB `/prices-history` (fidelity 1), Binance's daily
 1-second kline archive (checksums verified).
 
 ## collector.parquet
 
-Up/Down mids logged by the original bot's own collector (Feb to Mar 2026), at the minutes it
-sampled. Rows whose columns were shifted by a mid-file schema change fail the `|up + down - 1| <=
-0.03` check and are dropped. Used only to cross-check `snapshots.parquet`.
+Up/Down mids the original bot read from the live order book (Feb to Mar 2026), at the minutes
+it sampled. Rows whose columns were shifted by a mid-file schema change fail the `|up + down - 1| <=
+0.03` check and are dropped. Used to measure the price history's stamping lag.
 
 ## live_trades.parquet
 

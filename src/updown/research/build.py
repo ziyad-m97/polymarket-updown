@@ -3,10 +3,15 @@
     cycles.parquet     one row per resolved 15-minute BTC market
     snapshots.parquet  the Up price at every minute t = 60..840, with the BTC reference
 
-Polymarket's price history has about one point a minute. Each grid time takes the last point at
-or before it, never after, and records its age. The reference BTC price is read at that point's
-own second from Binance's one-second archive, so the market price and the model's input describe
-the same instant. Responses and archive days are cached, which makes rebuilds cheap and exact.
+Polymarket's price history has about one point a minute, and a point reports the mid from about
+`HISTORY_LAG_S` seconds before its timestamp (measured against the original bot's live midpoint
+samples; the report reproduces the measurement). Each grid time takes the last point stamped at
+or before it, never after. The BTC reference is read from Binance's one-second archive at the
+point's observation time, the stamp minus the lag. `ref_stamped` keeps the value at the stamp
+itself: it is ~20 s in the future of the price, and exists to show what that leak does.
+
+Markets and price points come from Polymarket's APIs; the reference only needs Binance's
+archive. Responses and archive days are cached, which makes rebuilds cheap and exact.
 """
 
 import asyncio
@@ -26,8 +31,9 @@ from updown.clock import Interval, epoch_of
 from updown.feeds.archive import SecondSeries, seconds
 from updown.feeds.binance import Candle, CandleSeries
 from updown.net import Fetcher
+from updown.research.dataset import HISTORY_LAG_S
 from updown.venue.clob import Clob
-from updown.venue.gamma import BTC_15M_SERIES, Gamma, GammaMarket, to_market, winner
+from updown.venue.gamma import BTC_15M_SERIES, Gamma, to_market, winner
 
 log = logging.getLogger(__name__)
 
@@ -53,19 +59,22 @@ SNAPSHOTS = pl.Schema(
     {
         "epoch": pl.Int64(),
         "t": pl.Int16(),
-        "age_s": pl.Int16(),
+        "stamp_age_s": pl.Int16(),
         "mid_up": pl.Float64(),
         "ref": pl.Float64(),
+        "ref_stamped": pl.Float64(),
         "vol_1m": pl.Float64(),
     }
 )
 
 
 @dataclass(frozen=True, slots=True)
-class Resolved:
-    raw: GammaMarket
+class MarketMeta:
     epoch: int
     winner: str
+    fee_rate: float
+    fee_exponent: float
+    twap_s: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,8 +82,12 @@ class Point:
     epoch: int
     t: int
     ts: int
-    """When the sampled price was printed."""
+    """The price point's timestamp."""
     mid_up: float
+
+    @property
+    def observed(self) -> int:
+        return self.ts - HISTORY_LAG_S
 
 
 def as_of(points: Sequence[tuple[int, float]], ts: int) -> tuple[int, float] | None:
@@ -101,13 +114,16 @@ def _ts(d: date) -> int:
     return int(datetime(d.year, d.month, d.day, tzinfo=UTC).timestamp())
 
 
-async def _resolved(gamma: Gamma, start: int, end: int) -> list[Resolved]:
+async def markets_and_points(
+    fetcher: Fetcher, start: int, end: int
+) -> tuple[list[MarketMeta], list[Point]]:
+    """Resolved markets with epoch in [start, end) and their sampled price points."""
     margin = timedelta(days=2)
     since = datetime.fromtimestamp(start, UTC) - margin
     until = datetime.fromtimestamp(end, UTC) + margin
-    found: dict[int, Resolved] = {}
+    found: dict[int, tuple[MarketMeta, str]] = {}
     unresolved = 0
-    async for raw in gamma.series(BTC_15M_SERIES, since, until):
+    async for raw in Gamma(fetcher).series(BTC_15M_SERIES, since, until):
         if not raw.slug.startswith(PREFIX) or raw.clob_token_ids is None:
             continue
         epoch = epoch_of(raw.slug)
@@ -117,29 +133,28 @@ async def _resolved(gamma: Gamma, start: int, end: int) -> list[Resolved]:
         if side is None:
             unresolved += 1
             continue
-        found[epoch] = Resolved(raw, epoch, str(side))
+        market = to_market(raw, Interval.M15)
+        meta = MarketMeta(epoch, str(side), market.fees.rate, market.fees.exponent, market.twap_s)
+        found[epoch] = (meta, market.token_up)
     log.info("%d resolved markets, %d skipped as unresolved", len(found), unresolved)
-    return [found[e] for e in sorted(found)]
 
+    clob, done = Clob(fetcher), 0
 
-async def _points(clob: Clob, markets: Sequence[Resolved]) -> list[Point]:
-    done = 0
-
-    async def one(item: Resolved) -> list[Point]:
+    async def one(epoch: int, token: str) -> list[Point]:
         nonlocal done
-        token = to_market(item.raw, Interval.M15).token_up
-        history = await clob.history(token, item.epoch, item.epoch + 900, cache=True)
+        history = await clob.history(token, epoch, epoch + 900, cache=True)
         done += 1
         if done % 2000 == 0:
-            log.info("price history %d/%d", done, len(markets))
-        return sample(item.epoch, history)
+            log.info("price history %d/%d", done, len(found))
+        return sample(epoch, history)
 
     async with asyncio.TaskGroup() as group:
-        tasks = [group.create_task(one(m)) for m in markets]
-    return [p for task in tasks for p in task.result()]
+        tasks = [group.create_task(one(e, found[e][1])) for e in sorted(found)]
+    points = [p for task in tasks for p in task.result()]
+    return [found[e][0] for e in sorted(found)], points
 
 
-async def _reference(
+async def reference(
     fetcher: Fetcher, needed: set[int], cache: Path
 ) -> tuple[dict[int, float | None], CandleSeries]:
     """BTC price at each needed second, and one-minute candles spanning them."""
@@ -161,34 +176,38 @@ async def _reference(
     return prices, CandleSeries(minutes)
 
 
+def needed_seconds(markets: Sequence[MarketMeta], points: Sequence[Point]) -> set[int]:
+    needed = {p.ts for p in points} | {p.observed for p in points}
+    return needed | {m.epoch for m in markets} | {m.epoch + 900 for m in markets}
+
+
 def assemble(
-    markets: Sequence[Resolved],
+    markets: Sequence[MarketMeta],
     points: Sequence[Point],
     prices: dict[int, float | None],
     minutes: CandleSeries,
 ) -> tuple[pl.DataFrame, pl.DataFrame]:
-    cycles = []
-    for item in markets:
-        market = to_market(item.raw, Interval.M15)
-        cycles.append(
-            {
-                "epoch": item.epoch,
-                "winner": item.winner,
-                "fee_rate": market.fees.rate,
-                "fee_exponent": market.fees.exponent,
-                "twap_s": market.twap_s,
-                "ref_open": prices.get(item.epoch),
-                "ref_close": prices.get(item.epoch + 900),
-            }
-        )
+    cycles = [
+        {
+            "epoch": m.epoch,
+            "winner": m.winner,
+            "fee_rate": m.fee_rate,
+            "fee_exponent": m.fee_exponent,
+            "twap_s": m.twap_s,
+            "ref_open": prices.get(m.epoch),
+            "ref_close": prices.get(m.epoch + 900),
+        }
+        for m in markets
+    ]
     snaps = [
         {
             "epoch": p.epoch,
             "t": p.t,
-            "age_s": p.epoch + p.t - p.ts,
+            "stamp_age_s": p.epoch + p.t - p.ts,
             "mid_up": p.mid_up,
-            "ref": prices.get(p.ts),
-            "vol_1m": minutes.vol_1m(p.ts),
+            "ref": prices.get(p.observed),
+            "ref_stamped": prices.get(p.ts),
+            "vol_1m": minutes.vol_1m(p.observed),
         }
         for p in points
     ]
@@ -198,18 +217,19 @@ def assemble(
     )
 
 
+def _client() -> httpx.AsyncClient:
+    return httpx.AsyncClient(timeout=httpx.Timeout(60.0), headers={"User-Agent": USER_AGENT})
+
+
 async def fetch(
     start: date, end: date, cache: Path, concurrency: int = 8
 ) -> tuple[pl.DataFrame, pl.DataFrame]:
-    lo, hi = _ts(start), _ts(end)
-    headers = {"User-Agent": USER_AGENT}
-    async with httpx.AsyncClient(timeout=httpx.Timeout(60.0), headers=headers) as http:
+    async with _client() as http:
         fetcher = Fetcher(http, concurrency=concurrency, cache_dir=cache / "http")
-        markets = await _resolved(Gamma(fetcher), lo, hi)
-        points = await _points(Clob(fetcher), markets)
-        needed = {p.ts for p in points} | {m.epoch for m in markets}
-        needed |= {m.epoch + 900 for m in markets}
-        prices, minutes = await _reference(fetcher, needed, cache / "binance")
+        markets, points = await markets_and_points(fetcher, _ts(start), _ts(end))
+        prices, minutes = await reference(
+            fetcher, needed_seconds(markets, points), cache / "binance"
+        )
     return assemble(markets, points, prices, minutes)
 
 

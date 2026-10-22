@@ -6,29 +6,30 @@ import numpy as np
 import polars as pl
 
 from updown.model.brownian import prob_up
-from updown.research.dataset import Dataset, with_regime
+from updown.research.dataset import HISTORY_LAG_S, Dataset, Reference, with_regime
 from updown.research.stats import Floats, brier, log_loss, logistic_fit, logit, wilson
 
 BINS = (0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0)
 
 
-def observations(ds: Dataset) -> pl.DataFrame:
+def observations(ds: Dataset, reference: Reference = "observed") -> pl.DataFrame:
     """One row per (cycle, minute): market P(Up), model P(Up) and the outcome.
 
-    Both probabilities use information as of the market price's own timestamp, so the model's
-    remaining time is counted from there.
+    The model reads BTC when the market price was observed and counts the time left from there;
+    `reference="stamped"` reproduces the leaky alignment for comparison.
     """
+    column, lag = ("ref", HISTORY_LAG_S) if reference == "observed" else ("ref_stamped", 0)
     frame = ds.snapshots.join(with_regime(ds.cycles), on="epoch", how="inner").filter(
-        pl.col("ref").is_not_null()
+        pl.col(column).is_not_null()
         & pl.col("vol_1m").is_not_null()
         & pl.col("ref_open").is_not_null()
     )
-    inputs = frame.select("ref_open", "ref", "vol_1m", "t", "age_s", "twap_s").iter_rows()
-    model = [prob_up(o, r, v, 900 - t + age, tw) for o, r, v, t, age, tw in inputs]
+    inputs = frame.select("ref_open", column, "vol_1m", "t", "stamp_age_s", "twap_s").iter_rows()
+    model = [prob_up(o, r, v, 900 - t + age + lag, tw) for o, r, v, t, age, tw in inputs]
     return frame.with_columns(
         model=pl.Series(model, dtype=pl.Float64),
         up=(pl.col("winner") == "Up").cast(pl.Float64),
-    ).select("epoch", "t", "age_s", "regime", "mid_up", "model", "up")
+    ).select("epoch", "t", "regime", "mid_up", "model", "up")
 
 
 def _arrays(frame: pl.DataFrame, *columns: str) -> list[Floats]:

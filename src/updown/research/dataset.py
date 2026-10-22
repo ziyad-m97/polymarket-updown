@@ -4,6 +4,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import polars as pl
@@ -15,6 +16,10 @@ DATA = Path("data")
 GRID = frozenset(range(60, 900, 60))
 HOLDOUT_START = int(datetime(2026, 3, 14, tzinfo=UTC).timestamp())
 """The legacy rules last changed on 13 March 2026; everything from the next UTC day is unseen."""
+HISTORY_LAG_S = 20
+"""A price-history point reports the mid from about this many seconds before its timestamp."""
+
+Reference = Literal["observed", "stamped"]
 
 
 class DataError(ValueError):
@@ -76,20 +81,21 @@ def _opt(x: float) -> float | None:
     return None if np.isnan(x) else float(x)
 
 
-def iter_cycles(ds: Dataset, epochs: pl.Series | None = None) -> Iterator[Cycle]:
-    """Cycles in time order, each with its snapshots, as the engine would have seen them."""
+def iter_cycles(ds: Dataset, reference: Reference = "observed") -> Iterator[Cycle]:
+    """Cycles in time order, each with its snapshots, as the engine would have seen them.
+
+    With `reference="stamped"` the BTC reference is read at the price point's timestamp instead
+    of its observation time, which hands anything compared with the price ~20 s of the future.
+    """
     snaps = ds.snapshots.sort("epoch", "t")
-    cycles = (
-        ds.cycles if epochs is None else ds.cycles.filter(pl.col("epoch").is_in(epochs.implode()))
-    )
-    meta = {row["epoch"]: row for row in cycles.iter_rows(named=True)}
-    snaps = snaps.filter(pl.col("epoch").is_in(list(meta)))
+    meta = {row["epoch"]: row for row in ds.cycles.iter_rows(named=True)}
     epoch = snaps["epoch"].to_numpy()
     t = snaps["t"].to_numpy()
     mid = snaps["mid_up"].to_numpy()
-    ref = snaps["ref"].fill_null(np.nan).to_numpy()
+    column, lag = ("ref", HISTORY_LAG_S) if reference == "observed" else ("ref_stamped", 0)
+    ref = snaps[column].fill_null(np.nan).to_numpy()
     vol = snaps["vol_1m"].fill_null(np.nan).to_numpy()
-    age = snaps["age_s"].to_numpy()
+    age = snaps["stamp_age_s"].to_numpy() + lag
     starts = np.flatnonzero(np.diff(epoch, prepend=-1))
     ends = np.append(starts[1:], len(epoch))
     for lo, hi in zip(starts, ends, strict=True):

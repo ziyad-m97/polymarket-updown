@@ -22,7 +22,16 @@ from scipy.stats import fisher_exact
 from updown.domain import FeeSchedule
 from updown.research import calibration
 from updown.research.backtest import Costs, decide, price
-from updown.research.dataset import HOLDOUT_START, Cycle, Dataset, iter_cycles, load, with_regime
+from updown.research.dataset import (
+    HISTORY_LAG_S,
+    HOLDOUT_START,
+    Cycle,
+    Dataset,
+    Reference,
+    iter_cycles,
+    load,
+    with_regime,
+)
 from updown.research.stats import holm, return_on_stake, wilson
 from updown.strategy.base import Strategy
 from updown.strategy.fair_value import FairValue
@@ -88,6 +97,37 @@ def strategies() -> dict[str, Strategy]:
     return rules
 
 
+def timing(ds: Dataset, collector: pl.DataFrame) -> pl.DataFrame:
+    """How often a price-history point equals the bot's live mid, by how long after it was stamped.
+
+    The bot sampled the live midpoint at each minute `t` (within 5 s). The dataset's snapshot at
+    `t + 60` is the last history point stamped before `t + 60`, so its stamp falls
+    `60 - stamp_age_s` seconds after the bot's sample.
+    """
+    later = ds.snapshots.select(
+        "epoch",
+        (pl.col("t") - 60).alias("t"),
+        pl.col("mid_up").alias("history"),
+        (60 - pl.col("stamp_age_s")).alias("stamped after"),
+    )
+    pairs = collector.join(later, on=["epoch", "t"], how="inner").filter(
+        pl.col("stamped after").is_between(1, 60)
+    )
+    return (
+        pairs.group_by(((pl.col("stamped after") - 1) // 10 * 10 + 1).alias("from"))
+        .agg(
+            pl.len().alias("n"),
+            ((pl.col("history") - pl.col("mid_up")).abs() <= 0.005).mean().alias("equal share"),
+            (pl.col("history") - pl.col("mid_up")).abs().mean().alias("mean gap"),
+        )
+        .sort("from")
+        .with_columns(
+            pl.format("{}-{} s", pl.col("from"), pl.col("from") + 9).alias("stamped after")
+        )
+        .select("stamped after", "n", "equal share", "mean gap")
+    )
+
+
 def data_section(ds: Dataset, collector: pl.DataFrame) -> Section:
     cycles = with_regime(ds.cycles)
     regimes = (
@@ -105,34 +145,33 @@ def data_section(ds: Dataset, collector: pl.DataFrame) -> Section:
     agree = flat.select(
         ((pl.col("ref_close") >= pl.col("ref_open")) == (pl.col("winner") == "Up")).mean()
     ).item()
-    pairs = collector.join(ds.snapshots, on=["epoch", "t"], how="inner", suffix="_api")
-    gap = (pairs["mid_up"] - pairs["mid_up_api"]).abs()
-    same = ((pairs["mid_up"] >= 0.5) == (pairs["mid_up_api"] >= 0.5)).mean()
+    lag = timing(ds, collector)
     n = {
         "cycles": ds.cycles.height,
         "snapshots": ds.snapshots.height,
         "first": _date(int(_num(ds.cycles["epoch"].min()))),
         "last": _date(int(_num(ds.cycles["epoch"].max()))),
-        "median_age_s": _num(ds.snapshots["age_s"].median()),
+        "median_stamp_age_s": _num(ds.snapshots["stamp_age_s"].median()),
         "binance_direction_agreement": _num(agree),
-        "collector_pairs": pairs.height,
-        "collector_median_gap": _num(gap.median()),
-        "collector_p90_gap": _num(gap.quantile(0.9)),
-        "collector_same_favourite": _num(same),
+        "timing": lag.to_dicts(),
     }
     body = [
         f"{n['cycles']:,} resolved 15-minute BTC markets from {n['first']} to {n['last']}, with "
         f"{n['snapshots']:,} minute snapshots. A snapshot's price is Polymarket's last "
-        f"price-history point at or before the minute (median age {n['median_age_s']:.0f} s); "
-        "the BTC reference is read from Binance at that same second.",
+        "price-history point stamped at or before the minute (median "
+        f"{n['median_stamp_age_s']:.0f} s earlier).",
         table(regimes, {"up share": ".3f"}),
-        f"Binance's open-to-close direction matches the official Chainlink result in "
+        "Those stamps are late. The original bot logged the live order-book mid on the minute; "
+        "a history point equals that mid most often when it is stamped 10 to 20 s afterwards, "
+        "and less and less as the gap grows:",
+        table(lag, {"equal share": ".3f", "mean gap": ".4f"}),
+        f"So a history point shows the mid from about {HISTORY_LAG_S} s before its stamp, and the "
+        "BTC reference is read at that observation time. Read at the stamp instead, it would "
+        f"hand the model {HISTORY_LAG_S} s of the future; the last table under the rules below "
+        "shows what that does. Binance's open-to-close direction matches the official Chainlink "
+        f"result in "
         f"{n['binance_direction_agreement']:.1%} of cycles, so Binance feeds the model and never "
-        f"the labels. The original bot's own collector agrees with the price history on the "
-        f"favourite in {n['collector_same_favourite']:.1%} of {n['collector_pairs']:,} shared "
-        f"snapshots (median gap {n['collector_median_gap']:.3f}, 90th percentile "
-        f"{n['collector_p90_gap']:.3f}); the bot sampled on the minute, a median "
-        f"{n['median_age_s']:.0f} s after the history point it is compared with.",
+        "the labels.",
     ]
     return Section("Data", "\n\n".join(body), n)
 
@@ -211,7 +250,8 @@ def rules_section(ds: Dataset, results: Path) -> Section:
         trades = price(decisions, BASE).join(regimes, on="epoch")
         held = trades.filter(pl.col("regime") != DEV)
         dev, hold = evaluate(trades.filter(pl.col("regime") == DEV)), evaluate(held)
-        rows.append({"rule": name} | _prefix("dev_", dev) | _prefix("hold_", hold))
+        ci = f"[{hold['lo']:+.3f}, {hold['hi']:+.3f}]" if hold["n"] else ""
+        rows.append({"rule": name} | _prefix("dev_", dev) | _prefix("hold_", hold) | {"ci": ci})
         curves[name] = held.sort("epoch")
         for (regime,), part in held.group_by("regime", maintain_order=True):
             stats = evaluate(part)
@@ -236,9 +276,7 @@ def rules_section(ds: Dataset, results: Path) -> Section:
         pl.col("hold_win_rate").alias("win rate"),
         pl.col("hold_avg_price").alias("avg price"),
         pl.col("hold_roi").alias("holdout ROI"),
-        pl.format("[{}, {}]", pl.col("hold_lo").round(3), pl.col("hold_hi").round(3)).alias(
-            "95% CI"
-        ),
+        pl.col("ci").alias("95% CI"),
         pl.col("hold_p_holm").alias("p (Holm)"),
     )
     sens = pl.DataFrame(sensitivity).pivot(on="half_spread", index="rule", values="roi")
@@ -265,9 +303,40 @@ def rules_section(ds: Dataset, results: Path) -> Section:
         table(regime_view),
         "Holdout ROI by the half-spread paid on entry:",
         table(sens, dict.fromkeys(sens.columns[1:], "+.3f")),
+        "The fair-value rule is the one that depends on timing. With the BTC reference read at "
+        "the price point's stamp, as a naive join would do, it shows a significant edge; read "
+        "when the price was actually observed, the edge is gone:",
+        table(
+            leak(ds),
+            {"dev ROI": "+.3f", "holdout ROI": "+.3f", "p": ".3f"},
+        ),
     ]
     numbers = {"rules": summary.to_dicts(), "sensitivity": sensitivity, "by_regime": by_regime}
-    return Section("Do the old rules survive out of sample?", "\n\n".join(body), numbers)
+    return Section("Do the rules survive out of sample?", "\n\n".join(body), numbers)
+
+
+def leak(ds: Dataset) -> pl.DataFrame:
+    """The fair-value rule with the reference at the stamp versus at the observation time."""
+    rows = []
+    alignments: tuple[tuple[str, Reference], ...] = (
+        ("at the stamp (leaks ~20 s of future)", "stamped"),
+        ("at the observation time", "observed"),
+    )
+    for label, reference in alignments:
+        trades = price(decide(iter_cycles(ds, reference), FairValue()), BASE)
+        dev = evaluate(trades.filter(pl.col("epoch") < HOLDOUT_START))
+        hold = evaluate(trades.filter(pl.col("epoch") >= HOLDOUT_START))
+        rows.append(
+            {
+                "BTC reference read": label,
+                "dev ROI": dev.get("roi"),
+                "holdout n": int(hold["n"]),
+                "holdout ROI": hold.get("roi"),
+                "95% CI": f"[{hold['lo']:+.3f}, {hold['hi']:+.3f}]",
+                "p": hold.get("p"),
+            }
+        )
+    return pl.DataFrame(rows)
 
 
 def _prefix(prefix: str, values: dict[str, float]) -> dict[str, object]:

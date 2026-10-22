@@ -8,7 +8,7 @@ from tests.helpers import market
 from updown.domain import CycleState, Intent, Side, Snapshot
 from updown.research.backtest import Costs, replay
 from updown.research.build import MAX_AGE_S, as_of, sample
-from updown.research.dataset import Cycle, DataError, Dataset, validate
+from updown.research.dataset import HISTORY_LAG_S, Cycle, DataError, Dataset, iter_cycles, validate
 from updown.research.stats import holm, logistic_fit, return_on_stake, wilson
 
 
@@ -111,3 +111,35 @@ def test_cycle_is_immutable() -> None:
     c = cycle([0.5] * 14, Side.UP)
     with pytest.raises(dataclasses.FrozenInstanceError):
         c.winner = Side.DOWN  # type: ignore[misc]
+
+
+def test_iter_cycles_reads_the_reference_at_the_chosen_time() -> None:
+    cycles = pl.DataFrame(
+        {
+            "epoch": [900],
+            "winner": ["Up"],
+            "fee_rate": [0.07],
+            "fee_exponent": [1.0],
+            "twap_s": [0],
+            "ref_open": [100.0],
+        }
+    )
+    snaps = pl.DataFrame(
+        {
+            "epoch": [900],
+            "t": [60],
+            "stamp_age_s": [30],
+            "mid_up": [0.5],
+            "ref": [101.0],
+            "ref_stamped": [102.0],
+            "vol_1m": [0.001],
+        }
+    )
+    ds = Dataset(cycles, snaps)
+    (observed,) = iter_cycles(ds)
+    (stamped,) = iter_cycles(ds, "stamped")
+    assert (observed.snapshots[0].ref, observed.snapshots[0].observed) == (
+        101.0,
+        60 - 30 - HISTORY_LAG_S,
+    )
+    assert (stamped.snapshots[0].ref, stamped.snapshots[0].observed) == (102.0, 60 - 30)
